@@ -94,6 +94,9 @@ The action sends a POST request to the `/generate-content` endpoint with the fol
 ```json
 {
   "summary": "• Updated user authentication flow to support OAuth2\n• Modified login.js and auth.js files\n• Improves security and user experience by enabling social login options",
+  "repository": "username/repo-name",
+  "commit_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
+  "branch": "main",
   "timestamp": "2023-12-01T12:00:00.000Z"
 }
 ```

@@ -12,11 +12,17 @@ async function getCommitChanges() {
     const changedFiles = execSync('git show --name-status HEAD', { encoding: 'utf8' }).trim();
     const diffOutput = execSync('git show HEAD --pretty=format:"" --name-only', { encoding: 'utf8' }).trim();
     
+    // Get repository and branch info
+    const branch = execSync('git branch --show-current', { encoding: 'utf8' }).trim() || 
+                   execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    
     return {
       message: commitMessage,
-      hash: commitHash.substring(0, 8),
+      hash: commitHash,
+      shortHash: commitHash.substring(0, 8),
       files: changedFiles,
-      diff: diffOutput
+      diff: diffOutput,
+      branch: branch
     };
   } catch (error) {
     core.warning(`Could not get git commit info: ${error.message}`);
@@ -33,7 +39,7 @@ async function generateSummary(commitData, blackboxApiKey, model) {
 - Impact on users or system
 
 Commit Details:
-- Hash: ${commitData.hash}
+- Hash: ${commitData.shortHash}
 - Message: ${commitData.message}
 - Files: ${commitData.files}
 
@@ -108,15 +114,30 @@ Provide a clear, structured summary in 2-4 bullet points.`;
   });
 }
 
-async function sendToAPI(summary, apiKey, apiUrl) {
+async function sendToAPI(summary, apiKey, apiUrl, commitData) {
   return new Promise((resolve, reject) => {
     try {
       const url = new URL(apiUrl);
       const isHttps = url.protocol === 'https:';
       const client = isHttps ? https : http;
 
+      // Get repository name from environment or git remote
+      let repository = process.env.GITHUB_REPOSITORY || '';
+      if (!repository) {
+        try {
+          const remoteUrl = execSync('git config --get remote.origin.url', { encoding: 'utf8' }).trim();
+          const match = remoteUrl.match(/github\.com[:/]([^/]+\/[^/.]+)/);
+          repository = match ? match[1] : 'unknown/repository';
+        } catch (error) {
+          repository = 'unknown/repository';
+        }
+      }
+
       const postData = JSON.stringify({
         summary: summary,
+        repository: repository,
+        commit_sha: commitData?.hash || 'unknown',
+        branch: commitData?.branch || process.env.GITHUB_REF_NAME || 'unknown',
         timestamp: new Date().toISOString()
       });
 
@@ -212,7 +233,7 @@ async function run() {
         throw new Error('Could not retrieve commit data and no changes provided');
       }
 
-      core.info(`Found commit: ${commitData.hash} - ${commitData.message}`);
+      core.info(`Found commit: ${commitData.shortHash} - ${commitData.message}`);
       
       // Generate AI summary
       core.info('Generating AI summary with BlackBox AI...');
@@ -222,7 +243,7 @@ async function run() {
 
     // Send summary to API
     core.info(`Sending summary to API: ${apiUrl}`);
-    const response = await sendToAPI(summary, apiKey, apiUrl);
+    const response = await sendToAPI(summary, apiKey, apiUrl, commitData);
 
     // Set outputs
     core.setOutput('summary', summary);
