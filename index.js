@@ -120,10 +120,17 @@ async function sendToAPI(summary, apiKey, apiUrl) {
         timestamp: new Date().toISOString()
       });
 
+      // Ensure the path ends with /generate-content
+      let path = url.pathname;
+      if (!path.endsWith('/generate-content')) {
+        path = path.replace(/\/$/, '') + '/generate-content';
+      }
+      path += url.search;
+
       const options = {
         hostname: url.hostname,
         port: url.port || (isHttps ? 443 : 80),
-        path: url.pathname + url.search,
+        path: path,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

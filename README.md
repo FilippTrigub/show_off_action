@@ -89,7 +89,7 @@ jobs:
 
 ## API Request Format
 
-The action sends a POST request with the following JSON structure:
+The action sends a POST request to the `/generate-content` endpoint with the following JSON structure:
 
 ```json
 {
@@ -97,6 +97,8 @@ The action sends a POST request with the following JSON structure:
   "timestamp": "2023-12-01T12:00:00.000Z"
 }
 ```
+
+**Note**: The action automatically appends `/generate-content` to your API URL if not already present.
 
 ## Headers
 
