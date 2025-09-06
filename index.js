@@ -210,12 +210,10 @@ async function run() {
       throw new Error('BlackBox API key is required');
     }
     
-    if (!apiKey) {
-      throw new Error('API key is required');
-    }
-
-    if (!apiUrl) {
-      throw new Error('API URL is required');
+    // API key and URL are now optional
+    const hasApiConfig = apiKey && apiUrl;
+    if (!hasApiConfig) {
+      core.info('⚠️ No API configuration provided - summary will be generated but not sent to external API');
     }
 
     let commitData = null;
@@ -241,22 +239,32 @@ async function run() {
       core.info(`Generated summary: ${summary}`);
     }
 
-    // Send summary to API
-    core.info(`Sending summary to API: ${apiUrl}`);
-    const response = await sendToAPI(summary, apiKey, apiUrl, commitData);
-
-    // Set outputs
+    // Set summary output
     core.setOutput('summary', summary);
-    core.setOutput('response', response.body);
-    core.setOutput('status', response.statusCode.toString());
+    core.info(`✅ Generated summary: ${summary}`);
 
-    // Log results
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      core.info(`✅ Successfully sent summary to API (Status: ${response.statusCode})`);
-      core.info(`Response: ${response.body}`);
+    // Send summary to API only if API configuration is provided
+    if (hasApiConfig) {
+      core.info(`Sending summary to API: ${apiUrl}`);
+      const response = await sendToAPI(summary, apiKey, apiUrl, commitData);
+
+      // Set API-related outputs
+      core.setOutput('response', response.body);
+      core.setOutput('status', response.statusCode.toString());
+
+      // Log API results
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        core.info(`✅ Successfully sent summary to API (Status: ${response.statusCode})`);
+        core.info(`Response: ${response.body}`);
+      } else {
+        core.warning(`⚠️ API returned non-success status: ${response.statusCode}`);
+        core.warning(`Response: ${response.body}`);
+      }
     } else {
-      core.warning(`⚠️ API returned non-success status: ${response.statusCode}`);
-      core.warning(`Response: ${response.body}`);
+      // Set default outputs when no API is configured
+      core.setOutput('response', 'No API configured - summary generated only');
+      core.setOutput('status', '200');
+      core.info('📝 Summary generated successfully (no API call made)');
     }
 
   } catch (error) {

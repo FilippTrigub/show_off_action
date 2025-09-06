@@ -1,0 +1,30 @@
+name: Test Show Off Action
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test-summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need at least 2 commits for git diff
+
+      - name: Test Action (Summary Only)
+        uses: ./
+        with:
+          blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
+          model: 'blackboxai'
+        # Note: No api-key or api-url provided - will only generate summary
+
+      - name: Display Summary
+        run: |
+          echo "Generated Summary:"
+          echo "${{ steps.test-summarize.outputs.summary }}"
+          echo ""
+          echo "Response: ${{ steps.test-summarize.outputs.response }}"
+          echo "Status: ${{ steps.test-summarize.outputs.status }}"

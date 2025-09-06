@@ -1,5 +1,5 @@
 name: 'Summarize and Send Changes to API'
-description: 'Generate AI summary of commit changes and send to an external API endpoint'
+description: 'Generate AI summary of commit changes using BlackBox AI. Optionally send to an external API endpoint.'
 author: 'Your Name'
 
 inputs:
@@ -10,10 +10,10 @@ inputs:
     description: 'BlackBox AI API key for generating summaries'
     required: true
   api-key:
-    description: 'API key for authentication to target API'
-    required: true
+    description: 'API key for authentication to target API (optional - if not provided, summary will only be generated)'
+    required: false
   api-url:
-    description: 'The API endpoint URL to send data to'
+    description: 'The API endpoint URL to send data to (optional - if not provided, summary will only be generated)'
     required: false
     default: 'https://api.example.com/changes'
   model:
