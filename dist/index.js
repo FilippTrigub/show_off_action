@@ -308,12 +308,12 @@ async function sendToAPI(summary, apiUrl, commitData) {
                 reject(error);
             });
             req.on('timeout', () => {
-                core.error('⏰ API request timeout (30s)');
+                core.error('⏰ API request timeout (600s)');
                 req.destroy();
                 reject(new Error('Request timeout'));
             });
-            core.info('⏱️ Setting 30 second timeout...');
-            req.setTimeout(30000);
+            core.info('⏱️ Setting 600 second timeout...');
+            req.setTimeout(600000);
             core.info('📤 Sending API request...');
             req.write(postData);
             req.end();
