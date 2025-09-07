@@ -21,5 +21,5 @@ jobs:
         with:
           blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
           api-key: ${{ secrets.API_KEY }}
-          api-url: 'https://your-api.com/changes'  # Replace with your actual API URL
+          api-url: ${{ secrets.BACKEND_URL }}
           model: 'blackboxai'

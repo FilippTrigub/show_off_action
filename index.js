@@ -134,10 +134,10 @@ async function sendToAPI(summary, apiKey, apiUrl, commitData) {
       }
 
       const postData = JSON.stringify({
-        summary: summary,
         repository: repository,
         commit_sha: commitData?.hash || 'unknown',
         branch: commitData?.branch || process.env.GITHUB_REF_NAME || 'unknown',
+        summary: summary,
         timestamp: new Date().toISOString()
       });
 
