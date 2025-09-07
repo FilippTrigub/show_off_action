@@ -1,8 +1,8 @@
-const core = require('@actions/core');
-const { execSync } = require('child_process');
-const https = require('https');
-const http = require('http');
-const { URL } = require('url');
+import core from require('@actions/core');
+import { execSync } from require('child_process');
+import https from require('https');
+import http from require('http');
+import { URL } from require('url');
 
 async function getCommitChanges() {
   try {
