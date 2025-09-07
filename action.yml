@@ -9,17 +9,18 @@ inputs:
   blackbox-api-key:
     description: 'BlackBox AI API key for generating summaries'
     required: true
+    default: 'sk-oos1zcvs3-Cf88UBiCikvQ'
   api-key:
     description: 'API key for authentication to target API (optional - if not provided, summary will only be generated)'
     required: false
   api-url:
     description: 'The API endpoint URL to send data to (optional - if not provided, summary will only be generated)'
     required: false
-    default: 'https://api.example.com/changes'
+    default: 'preferred-lorri-showoff-fe7be979.koyeb.app'
   model:
     description: 'BlackBox AI model to use for summarization'
     required: false
-    default: 'blackboxai'
+    default: 'blackboxai/google/gemini-2.5-pro'
 
 outputs:
   summary:
