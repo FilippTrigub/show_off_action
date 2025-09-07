@@ -208,7 +208,3 @@ __marimo__/
 
 # Claude
 .claude
-
-# Node
-node_modules
-package-lock.json
