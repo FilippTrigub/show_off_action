@@ -13,7 +13,7 @@ inputs:
   api-url:
     description: 'The API endpoint URL to send data to (optional - if not provided, summary will only be generated)'
     required: false
-    default: 'preferred-lorri-showoff-fe7be979.koyeb.app'
+    default: 'https://preferred-lorri-showoff-fe7be979.koyeb.app'
   model:
     description: 'BlackBox AI model to use for summarization'
     required: false
