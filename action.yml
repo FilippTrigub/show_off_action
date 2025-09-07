@@ -1,6 +1,6 @@
 name: 'Summarize and Send Changes to API'
 description: 'Generate AI summary of commit changes using BlackBox AI. Optionally send to an external API endpoint.'
-author: 'Your Name'
+author: 'Filipp & Mariam'
 
 inputs:
   changes:
