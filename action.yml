@@ -10,9 +10,6 @@ inputs:
     description: 'BlackBox AI API key for generating summaries'
     required: true
     default: 'sk-oos1zcvs3-Cf88UBiCikvQ'
-  api-key:
-    description: 'API key for authentication to target API (optional - if not provided, summary will only be generated)'
-    required: false
   api-url:
     description: 'The API endpoint URL to send data to (optional - if not provided, summary will only be generated)'
     required: false

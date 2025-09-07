@@ -47,13 +47,31 @@ const http = __importStar(__nccwpck_require__(8611));
 const url_1 = __nccwpck_require__(7016);
 async function getCommitChanges() {
     try {
+        core.info('🔍 Starting git commit data extraction...');
+        core.info('📝 Extracting commit message...');
         const commitMessage = (0, child_process_1.execSync)('git log -1 --pretty=format:"%s"', { encoding: 'utf8' }).trim();
+        core.info(`📝 Commit message: "${commitMessage}"`);
+        core.info('🔗 Extracting commit hash...');
         const commitHash = (0, child_process_1.execSync)('git log -1 --pretty=format:"%H"', { encoding: 'utf8' }).trim();
+        core.info(`🔗 Full commit hash: ${commitHash}`);
+        core.info('📂 Extracting changed files...');
         const changedFiles = (0, child_process_1.execSync)('git show --name-status HEAD', { encoding: 'utf8' }).trim();
+        core.info(`📂 Changed files:\n${changedFiles}`);
+        core.info('📊 Extracting diff output...');
         const diffOutput = (0, child_process_1.execSync)('git show HEAD --pretty=format:"" --name-only', { encoding: 'utf8' }).trim();
-        const branch = (0, child_process_1.execSync)('git branch --show-current', { encoding: 'utf8' }).trim() ||
-            (0, child_process_1.execSync)('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-        return {
+        core.info(`📊 Diff output:\n${diffOutput}`);
+        core.info('🌿 Extracting branch information...');
+        let branch = '';
+        try {
+            branch = (0, child_process_1.execSync)('git branch --show-current', { encoding: 'utf8' }).trim();
+            core.info(`🌿 Current branch (method 1): "${branch}"`);
+        }
+        catch (branchError) {
+            core.warning(`⚠️ Method 1 failed, trying alternative: ${branchError instanceof Error ? branchError.message : String(branchError)}`);
+            branch = (0, child_process_1.execSync)('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+            core.info(`🌿 Current branch (method 2): "${branch}"`);
+        }
+        const commitData = {
             message: commitMessage,
             hash: commitHash,
             shortHash: commitHash.substring(0, 8),
@@ -61,15 +79,26 @@ async function getCommitChanges() {
             diff: diffOutput,
             branch: branch
         };
+        core.info('✅ Successfully extracted all git commit data:');
+        core.info(`   - Message: "${commitData.message}"`);
+        core.info(`   - Hash: ${commitData.hash}`);
+        core.info(`   - Short Hash: ${commitData.shortHash}`);
+        core.info(`   - Branch: "${commitData.branch}"`);
+        core.info(`   - Files changed: ${commitData.files.split('\n').length} files`);
+        return commitData;
     }
     catch (error) {
-        core.warning(`Could not get git commit info: ${error instanceof Error ? error.message : String(error)}`);
+        core.error(`❌ Failed to get git commit info: ${error instanceof Error ? error.message : String(error)}`);
+        core.warning(`🔍 Error details: ${error instanceof Error ? error.stack : 'No stack trace available'}`);
         return null;
     }
 }
 async function generateSummary(commitData, blackboxApiKey, model) {
     return new Promise((resolve, reject) => {
         try {
+            core.info('🤖 Starting AI summary generation with BlackBox AI...');
+            core.info(`🔧 Using model: ${model}`);
+            core.info(`🔑 API key provided: ${blackboxApiKey ? `Yes (${blackboxApiKey.substring(0, 8)}...)` : 'No'}`);
             const prompt = `Analyze this git commit and provide a concise, professional summary focusing on:
 - What changed (key functionality, files, features)
 - Why the change was made (purpose, problem solved)
@@ -81,7 +110,9 @@ Commit Details:
 - Files: ${commitData.files}
 
 Provide a clear, structured summary in 2-4 bullet points.`;
-            const postData = JSON.stringify({
+            core.info(`📝 Generated prompt (${prompt.length} chars):`);
+            core.info(`${prompt.substring(0, 200)}...`);
+            const requestPayload = {
                 model: model,
                 messages: [
                     {
@@ -95,7 +126,9 @@ Provide a clear, structured summary in 2-4 bullet points.`;
                 ],
                 temperature: 0.3,
                 max_tokens: 300
-            });
+            };
+            const postData = JSON.stringify(requestPayload);
+            core.info(`📦 Request payload size: ${Buffer.byteLength(postData)} bytes`);
             const options = {
                 hostname: 'api.blackbox.ai',
                 port: 443,
@@ -108,71 +141,127 @@ Provide a clear, structured summary in 2-4 bullet points.`;
                     'User-Agent': 'GitHub-Action-Summarizer/1.0'
                 }
             };
+            core.info(`🌐 Making request to: https://${options.hostname}${options.path}`);
+            core.info(`📋 Request headers:`);
+            Object.entries(options.headers || {}).forEach(([key, value]) => {
+                if (key === 'Authorization') {
+                    core.info(`   ${key}: Bearer ${String(value).substring(7, 15)}...`);
+                }
+                else {
+                    core.info(`   ${key}: ${value}`);
+                }
+            });
             const req = https.request(options, (res) => {
+                core.info(`📥 Response status: ${res.statusCode} ${res.statusMessage}`);
+                core.info(`📋 Response headers:`);
+                Object.entries(res.headers).forEach(([key, value]) => {
+                    core.info(`   ${key}: ${value}`);
+                });
                 let data = '';
                 res.on('data', (chunk) => {
-                    data += chunk;
+                    const chunkStr = chunk.toString();
+                    core.info(`📥 Received chunk: ${chunkStr.length} bytes`);
+                    data += chunkStr;
                 });
                 res.on('end', () => {
+                    core.info(`📥 Response complete. Total size: ${data.length} bytes`);
+                    core.info(`📄 Raw response: ${data}`);
                     try {
                         const response = JSON.parse(data);
+                        core.info('✅ Successfully parsed JSON response');
                         if (response.choices && response.choices[0] && response.choices[0].message) {
-                            resolve(response.choices[0].message.content.trim());
+                            const summary = response.choices[0].message.content.trim();
+                            core.info(`🎯 Extracted summary (${summary.length} chars): "${summary}"`);
+                            resolve(summary);
                         }
                         else {
+                            core.error('❌ Invalid response format from BlackBox AI');
+                            core.error(`🔍 Response structure: ${JSON.stringify(response, null, 2)}`);
                             reject(new Error('Invalid response format from BlackBox AI'));
                         }
                     }
                     catch (parseError) {
+                        core.error(`❌ Failed to parse BlackBox AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+                        core.error(`🔍 Raw response that failed to parse: ${data}`);
                         reject(new Error(`Failed to parse BlackBox AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`));
                     }
                 });
             });
             req.on('error', (error) => {
+                core.error(`❌ Request error: ${error.message}`);
+                core.error(`🔍 Error stack: ${error.stack}`);
                 reject(error);
             });
             req.on('timeout', () => {
+                core.error('⏰ BlackBox AI request timeout (30s)');
                 req.destroy();
                 reject(new Error('BlackBox AI request timeout'));
             });
+            core.info('⏱️ Setting 30 second timeout...');
             req.setTimeout(30000);
+            core.info('📤 Sending request...');
             req.write(postData);
             req.end();
+            core.info('📤 Request sent successfully');
         }
         catch (error) {
+            core.error(`❌ Error in generateSummary: ${error instanceof Error ? error.message : String(error)}`);
+            core.error(`🔍 Error stack: ${error instanceof Error ? error.stack : 'No stack trace'}`);
             reject(error);
         }
     });
 }
-async function sendToAPI(summary, apiKey, apiUrl, commitData) {
+async function sendToAPI(summary, apiUrl, commitData) {
     return new Promise((resolve, reject) => {
         try {
+            core.info('🚀 Starting API request to /generate-content endpoint...');
+            core.info(`🌐 Target API URL: ${apiUrl}`);
             const url = new url_1.URL(apiUrl);
             const isHttps = url.protocol === 'https:';
             const client = isHttps ? https : http;
+            core.info(`🔒 Using ${isHttps ? 'HTTPS' : 'HTTP'} client`);
+            core.info(`🏠 Hostname: ${url.hostname}`);
+            core.info(`🚪 Port: ${url.port || (isHttps ? 443 : 80)}`);
+            core.info('📚 Determining repository information...');
             let repository = process.env.GITHUB_REPOSITORY || '';
+            core.info(`📚 GITHUB_REPOSITORY env var: ${repository || 'Not set'}`);
             if (!repository) {
+                core.info('📚 Attempting to get repository from git remote...');
                 try {
                     const remoteUrl = (0, child_process_1.execSync)('git config --get remote.origin.url', { encoding: 'utf8' }).trim();
+                    core.info(`📚 Git remote URL: ${remoteUrl}`);
                     const match = remoteUrl.match(/github\.com[:/]([^/]+\/[^/.]+)/);
                     repository = match ? match[1] : 'unknown/repository';
+                    core.info(`📚 Extracted repository: ${repository}`);
                 }
                 catch (error) {
+                    core.warning(`⚠️ Failed to get git remote: ${error instanceof Error ? error.message : String(error)}`);
                     repository = 'unknown/repository';
                 }
             }
-            const postData = JSON.stringify({
+            const payload = {
                 repository: repository,
                 commit_sha: commitData?.hash || 'unknown',
                 branch: commitData?.branch || process.env.GITHUB_REF_NAME || 'unknown',
                 summary: summary,
                 timestamp: new Date().toISOString()
-            });
+            };
+            core.info('📦 API payload:');
+            core.info(`   - repository: "${payload.repository}"`);
+            core.info(`   - commit_sha: "${payload.commit_sha}"`);
+            core.info(`   - branch: "${payload.branch}"`);
+            core.info(`   - summary: "${payload.summary.substring(0, 100)}..."`);
+            core.info(`   - timestamp: "${payload.timestamp}"`);
+            const postData = JSON.stringify(payload);
+            core.info(`📦 Payload size: ${Buffer.byteLength(postData)} bytes`);
             let path = url.pathname;
+            core.info(`🛣️ Original path: ${path}`);
             if (!path.endsWith('/generate-content')) {
                 path = path.replace(/\/$/, '') + '/generate-content';
+                core.info(`🛣️ Modified path to: ${path}`);
             }
             path += url.search;
+            core.info(`🛣️ Final path with search: ${path}`);
             const options = {
                 hostname: url.hostname,
                 port: url.port || (isHttps ? 443 : 80),
@@ -181,94 +270,142 @@ async function sendToAPI(summary, apiKey, apiUrl, commitData) {
                 headers: {
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(postData),
-                    'Authorization': `Bearer ${apiKey}`,
                     'User-Agent': 'GitHub-Action-Send-Changes/1.0'
                 }
             };
+            core.info(`🌐 Making request to: ${isHttps ? 'https' : 'http'}://${options.hostname}:${options.port}${options.path}`);
+            core.info(`📋 Request headers:`);
+            Object.entries(options.headers || {}).forEach(([key, value]) => {
+                core.info(`   ${key}: ${value}`);
+            });
             const req = client.request(options, (res) => {
+                core.info(`📥 Response received - Status: ${res.statusCode} ${res.statusMessage}`);
+                core.info(`📋 Response headers:`);
+                Object.entries(res.headers).forEach(([key, value]) => {
+                    core.info(`   ${key}: ${value}`);
+                });
                 let data = '';
                 res.on('data', (chunk) => {
-                    data += chunk;
+                    const chunkStr = chunk.toString();
+                    core.info(`📥 Received chunk: ${chunkStr.length} bytes`);
+                    data += chunkStr;
                 });
                 res.on('end', () => {
-                    resolve({
+                    core.info(`📥 Response complete. Total size: ${data.length} bytes`);
+                    core.info(`📄 Response body: ${data}`);
+                    const apiResponse = {
                         statusCode: res.statusCode || 0,
                         headers: res.headers,
                         body: data
-                    });
+                    };
+                    core.info(`✅ API request completed with status ${apiResponse.statusCode}`);
+                    resolve(apiResponse);
                 });
             });
             req.on('error', (error) => {
+                core.error(`❌ API request error: ${error.message}`);
+                core.error(`🔍 Error stack: ${error.stack}`);
                 reject(error);
             });
             req.on('timeout', () => {
+                core.error('⏰ API request timeout (30s)');
                 req.destroy();
                 reject(new Error('Request timeout'));
             });
+            core.info('⏱️ Setting 30 second timeout...');
             req.setTimeout(30000);
+            core.info('📤 Sending API request...');
             req.write(postData);
             req.end();
+            core.info('📤 API request sent successfully');
         }
         catch (error) {
+            core.error(`❌ Error in sendToAPI: ${error instanceof Error ? error.message : String(error)}`);
+            core.error(`🔍 Error stack: ${error instanceof Error ? error.stack : 'No stack trace'}`);
             reject(error);
         }
     });
 }
 async function run() {
     try {
+        core.info('🎬 === GitHub Action Started ===');
+        core.info('📋 Reading input parameters...');
         const changes = core.getInput('changes');
         const blackboxApiKey = core.getInput('blackbox-api-key');
-        const apiKey = core.getInput('api-key');
         const apiUrl = core.getInput('api-url');
         const model = core.getInput('model') || 'blackboxai';
+        core.info('📋 Input parameters:');
+        core.info(`   - changes: ${changes ? `"${changes.substring(0, 50)}..."` : 'Not provided'}`);
+        core.info(`   - blackbox-api-key: ${blackboxApiKey ? `Provided (${blackboxApiKey.length} chars)` : 'Not provided'}`);
+        core.info(`   - api-url: ${apiUrl || 'Not provided'}`);
+        core.info(`   - model: ${model}`);
+        core.info('🔍 Environment variables:');
+        core.info(`   - GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY || 'Not set'}`);
+        core.info(`   - GITHUB_REF_NAME: ${process.env.GITHUB_REF_NAME || 'Not set'}`);
+        core.info(`   - GITHUB_SHA: ${process.env.GITHUB_SHA || 'Not set'}`);
+        core.info(`   - GITHUB_WORKFLOW: ${process.env.GITHUB_WORKFLOW || 'Not set'}`);
+        core.info(`   - GITHUB_ACTION: ${process.env.GITHUB_ACTION || 'Not set'}`);
+        core.info('✅ Validating required inputs...');
         if (!blackboxApiKey) {
             throw new Error('BlackBox API key is required');
         }
-        const hasApiConfig = apiKey && apiUrl;
+        core.info('✅ BlackBox API key validation passed');
+        const hasApiConfig = !!apiUrl;
+        core.info(`🌐 API configuration: ${hasApiConfig ? 'Configured' : 'Not configured'}`);
         if (!hasApiConfig) {
-            core.info('⚠️ No API configuration provided - summary will be generated but not sent to external API');
+            core.info('⚠️ No API URL provided - summary will be generated but not sent to external API');
         }
         let commitData = null;
         let summary = '';
+        core.info('📝 Determining summary source...');
         if (changes) {
-            core.info('Using provided changes data');
+            core.info('📝 Using provided changes data as summary');
+            core.info(`📝 Changes data length: ${changes.length} characters`);
             summary = changes;
         }
         else {
-            core.info('Getting commit changes from git...');
+            core.info('📝 No changes provided, extracting from git...');
             commitData = await getCommitChanges();
             if (!commitData) {
                 throw new Error('Could not retrieve commit data and no changes provided');
             }
-            core.info(`Found commit: ${commitData.shortHash} - ${commitData.message}`);
-            core.info('Generating AI summary with BlackBox AI...');
+            core.info(`📍 Found commit: ${commitData.shortHash} - ${commitData.message}`);
+            core.info('🤖 Generating AI summary with BlackBox AI...');
             summary = await generateSummary(commitData, blackboxApiKey, model);
-            core.info(`Generated summary: ${summary}`);
+            core.info(`🎯 Generated summary (${summary.length} chars): ${summary}`);
         }
+        core.info('📤 Setting action outputs...');
         core.setOutput('summary', summary);
-        core.info(`✅ Generated summary: ${summary}`);
+        core.info(`✅ Summary output set: "${summary}"`);
         if (hasApiConfig) {
-            core.info(`Sending summary to API: ${apiUrl}`);
-            const response = await sendToAPI(summary, apiKey, apiUrl, commitData);
+            core.info(`🚀 Sending summary to external API: ${apiUrl}`);
+            const response = await sendToAPI(summary, apiUrl, commitData);
             core.setOutput('response', response.body);
             core.setOutput('status', response.statusCode.toString());
+            core.info('📤 API-related outputs set:');
+            core.info(`   - response: "${response.body}"`);
+            core.info(`   - status: "${response.statusCode}"`);
             if (response.statusCode >= 200 && response.statusCode < 300) {
-                core.info(`✅ Successfully sent summary to API (Status: ${response.statusCode})`);
-                core.info(`Response: ${response.body}`);
+                core.info(`🎉 Successfully sent summary to API (Status: ${response.statusCode})`);
+                core.info(`📄 API Response: ${response.body}`);
             }
             else {
                 core.warning(`⚠️ API returned non-success status: ${response.statusCode}`);
-                core.warning(`Response: ${response.body}`);
+                core.warning(`📄 API Response: ${response.body}`);
             }
         }
         else {
+            core.info('📤 Setting default outputs (no API configured)...');
             core.setOutput('response', 'No API configured - summary generated only');
             core.setOutput('status', '200');
             core.info('📝 Summary generated successfully (no API call made)');
         }
+        core.info('🎉 === GitHub Action Completed Successfully ===');
     }
     catch (error) {
+        core.error('💥 === GitHub Action Failed ===');
         core.error(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
+        core.error(`🔍 Error stack: ${error instanceof Error ? error.stack : 'No stack trace'}`);
         core.setFailed(error instanceof Error ? error.message : String(error));
     }
 }

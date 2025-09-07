@@ -23,7 +23,6 @@ jobs:
         uses: ./
         with:
           blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
-          api-key: ${{ secrets.API_KEY }}
           api-url: 'https://your-api.com/changes'
           model: 'blackboxai'
 ```
@@ -51,7 +50,6 @@ jobs:
         with:
           changes: ${{ steps.changes.outputs.changes }}
           blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
-          api-key: ${{ secrets.API_KEY }}
           api-url: 'https://your-api.com/changes'
 ```
 
@@ -61,8 +59,7 @@ jobs:
 |-------|-------------|----------|---------|
 | `changes` | Optional custom changes data (if not provided, action will get latest commit) | No | - |
 | `blackbox-api-key` | BlackBox AI API key for generating summaries | Yes | - |
-| `api-key` | API key for authentication to target API | Yes | - |
-| `api-url` | The API endpoint URL to send data to | No | `https://api.example.com/changes` |
+| `api-url` | The API endpoint URL to send data to (optional - if not provided, summary will only be generated) | No | `https://api.example.com/changes` |
 | `model` | BlackBox AI model to use for summarization | No | `blackboxai` |
 
 ## Outputs
@@ -106,13 +103,12 @@ The action sends a POST request to the `/generate-content` endpoint with the fol
 ## Headers
 
 - `Content-Type: application/json`
-- `Authorization: Bearer {api-key}`
 - `User-Agent: GitHub-Action-Send-Changes/1.0`
 
 ## Error Handling
 
 The action will fail if:
-- Required inputs (BlackBox API key, target API key) are missing
+- Required inputs (BlackBox API key) are missing
 - Git repository has no commits (when not providing custom changes)
 - BlackBox AI API request fails or times out
 - Target API request fails
@@ -121,9 +117,8 @@ The action will fail if:
 ## Setup Requirements
 
 1. **BlackBox AI API Key**: Sign up at [BlackBox AI](https://blackbox.ai) and get your API key
-2. **GitHub Secrets**: Store your API keys as repository secrets:
+2. **GitHub Secrets**: Store your API key as repository secret:
    - `BLACKBOX_API_KEY`: Your BlackBox AI API key
-   - `API_KEY`: Your target API authentication key
 
 ## Development
 
