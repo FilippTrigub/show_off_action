@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.blackbox.ai)",
+      "WebSearch",
+      "mcp__brave-search__brave_web_search"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

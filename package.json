@@ -2,21 +2,30 @@
   "name": "send-changes-to-api-action",
   "version": "1.0.0",
   "description": "GitHub Action to send commit changes to an external API",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && ncc build lib/index.js -o dist --source-map --license licenses.txt",
+    "package": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "all": "npm run build && npm run package"
   },
   "keywords": [
     "github-action",
     "api",
     "changes",
-    "commit"
+    "commit",
+    "typescript"
   ],
-  "author": "Your Name",
+  "author": "Filipp Trigub",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@vercel/ncc": "^0.38.1",
+    "typescript": "^5.4.5"
   },
   "engines": {
     "node": ">=20"
