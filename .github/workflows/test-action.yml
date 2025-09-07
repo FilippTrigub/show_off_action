@@ -18,8 +18,3 @@ jobs:
 
       - name: Summarize and Send to API
         uses: ./
-        with:
-          blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
-          api-key: ${{ secrets.API_KEY }}
-          api-url: ${{ secrets.BACKEND_URL }}
-          model: 'blackboxai'
